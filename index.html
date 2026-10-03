@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IctusSOS — Detección rápida de Ictus y Fibrilación Auricular en 60s</title>
+  <meta name="description" content="Cribado prehospitalario de Ictus en 60 segundos (Escala FAST / Cincinnati) y detector de arritmia. 100% privado en tu navegador.">
+  <style>
+    :root {
+      --bg: #0F172A;
+      --card-bg: #1E293B;
+      --danger: #EF4444;
+      --danger-hover: #DC2626;
+      --danger-light: #450A0A;
+      --warning: #F59E0B;
+      --success: #10B981;
+      --primary: #3B82F6;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border: #334155;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      background: rgba(239, 68, 68, 0.2);
+      color: #F87171;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 0.35rem;
+      border-radius: 12px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .step-box {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .step-box:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    .step-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+    .step-instructions {
+      color: #CBD5E1;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .btn-check {
+      padding: 1rem 0.75rem;
+      background: #0F172A;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s ease;
+    }
+    .btn-check.selected-normal {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.15);
+      color: #6EE7B7;
+    }
+    .btn-check.selected-danger {
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.2);
+      color: #FCA5A5;
+    }
+
+    .btn-emergency {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 1.25rem;
+      background: var(--danger);
+      color: white;
+      font-size: 1.35rem;
+      font-weight: 900;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.4);
+      margin-bottom: 1.5rem;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+
+    .emergency-banner {
+      background: rgba(239, 68, 68, 0.2);
+      border: 2px solid var(--danger);
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .emergency-banner h3 {
+      color: #F87171;
+      font-size: 1.35rem;
+      font-weight: 900;
+      margin-bottom: 0.35rem;
+    }
+
+    .protocol-card {
+      background: #0F172A;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .protocol-list {
+      list-style: none;
+      margin-top: 0.5rem;
+    }
+    .protocol-list li {
+      position: relative;
+      padding-left: 1.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+    .protocol-list li::before {
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    .list-do li::before { content: "✅"; }
+    .list-dont li::before { content: "❌"; }
+
+    /* Tap-tempo pulso */
+    .pulse-btn {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #EF4444 0%, #B91C1C 100%);
+      border: 6px solid rgba(239, 68, 68, 0.4);
+      color: white;
+      font-size: 1.25rem;
+      font-weight: 900;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 1.5rem auto;
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+      transition: transform 0.05s ease;
+    }
+    .pulse-btn:active { transform: scale(0.92); }
+
+    .pulse-metric-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .metric-item {
+      background: #0F172A;
+      border-radius: 10px;
+      padding: 0.85rem;
+    }
+    .metric-value { font-size: 1.6rem; font-weight: 900; color: #FFFFFF; }
+    .metric-lbl { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">⏱️ CÓDIGO ICTUS · PROTOCOLO DE URGENCIA</div>
+    <h1>IctusSOS</h1>
+    <p class="subtitle">Cribado prehospitalario en 60 segundos y detector de arritmia silenciosa</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabFast" onclick="cambiarTab('fast')">🚨 Cribado de Ictus (FAST)</button>
+    <button class="tab-btn" id="tabPulse" onclick="cambiarTab('pulse')">🫀 Test de Pulso y Arritmia</button>
+  </div>
+
+  <div class="card" id="contentCard">
+    <!-- Contenido dinámico -->
+  </div>
+</div>
+
+<script src="ictussos.js"></script>
+<script>
+  'use strict';
+
+  var tabActual = 'fast';
+  var fastState = {
+    cara: null,
+    brazo: null,
+    habla: null,
+    hora: ''
+  };
+
+  var pulseState = {
+    timestamps: [],
+    activo: false
+  };
+
+  var ubicacionTexto = 'Obteniendo localización GPS...';
+
+  // Obtener geolocalización para facilitar datos al 112
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      ubicacionTexto = 'Coordenadas: ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+    }, function () {
+      ubicacionTexto = 'Ubicación GPS no disponible (indicar dirección postal al 112).';
+    });
+  }
+
+  function cambiarTab(tab) {
+    tabActual = tab;
+    document.getElementById('tabFast').classList.toggle('active', tab === 'fast');
+    document.getElementById('tabPulse').classList.toggle('active', tab === 'pulse');
+    if (tab === 'fast') renderFast();
+    else renderPulse();
+  }
+
+  // ------------------------------------------------------------------ Pestaña FAST
+  function renderFast() {
+    var evaluacion = IctusSOS.evaluarFAST(fastState);
+    var card = document.getElementById('contentCard');
+
+    var html = '';
+
+    // Si hay algún signo positivo -> ALARMA ROJA INMEDIATA
+    if (evaluacion.sospechaIctus) {
+      html += `
+        <div class="emergency-banner">
+          <h3>🚨 ALERTA: ALTA SOSPECHA DE ICTUS (${evaluacion.porcentajeEstimado})</h3>
+          <p style="color:#CBD5E1; font-size:0.95rem; margin-top:0.25rem;">
+            Se ha detectado al menos 1 signo clásico del ictus. <strong>CADA MINUTO CUENTA:</strong> mueren 2 millones de neuronas por minuto.
+          </p>
+        </div>
+
+        <a href="tel:112" class="btn-emergency">
+          📞 LLAMAR AL 112 AHORA
+        </a>
+
+        <div style="background:#0F172A; border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; border-left:4px solid var(--primary);">
+          <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Qué decirle al operador del 112:</div>
+          <p style="font-size:1.1rem; font-weight:700; margin:0.5rem 0; color:#FFFFFF;">
+            «${evaluacion.mensajeSugerido112}»
+          </p>
+          <div style="font-size:0.9rem; color:#93C5FD;">📍 ${ubicacionTexto}</div>
+        </div>
+
+        <div class="protocol-card">
+          <h4 style="color:#10B981; font-size:1.1rem;">✅ Qué SÍ debes hacer:</h4>
+          <ul class="protocol-list list-do">
+            ${IctusSOS.PROTOCOLO_PRIMEROS_AUXILIOS.hacer.map(function(h){ return '<li>'+h+'</li>'; }).join('')}
+          </ul>
+        </div>
+
+        <div class="protocol-card" style="border:1px solid #7F1D1D;">
+          <h4 style="color:#EF4444; font-size:1.1rem;">❌ LO QUE NUNCA DEBES HACER (PELIGRO MORTAL):</h4>
+          <ul class="protocol-list list-dont">
+            ${IctusSOS.PROTOCOLO_PRIMEROS_AUXILIOS.noHacer.map(function(nh){ return '<li>'+nh+'</li>'; }).join('')}
+          </ul>
+        </div>
+
+        <button onclick="reiniciarFAST()" style="background:none; border:none; color:var(--text-muted); text-decoration:underline; font-size:0.9rem; width:100%; cursor:pointer; margin-top:1rem;">
+          Reiniciar test de comprobación
+        </button>
+      `;
+      card.innerHTML = html;
+      return;
+    }
+
+    // Formulario de los 3 pasos de comprobación
+    html += `
+      <div class="step-box">
+        <div class="step-header">
+          <span class="step-num">F</span>
+          <span class="step-title">Cara (Face): Sonrisa y simetría</span>
+        </div>
+        <p class="step-instructions">Pide a la persona que sonría ampliamente o enseñe los dientes:</p>
+        <div class="options-grid">
+          <button class="btn-check ${fastState.cara === false ? 'selected-normal' : ''}" onclick="seleccionarFAST('cara', false)">
+            <span>😃 Sonrisa simétrica</span>
+            <small style="color:var(--text-muted);">Ambos lados suben igual</small>
+          </button>
+          <button class="btn-check ${fastState.cara === true ? 'selected-danger' : ''}" onclick="seleccionarFAST('cara', true)">
+            <span>🥴 Comisura caída</span>
+            <small style="color:var(--danger);">Un lado de la boca no sube</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-header">
+          <span class="step-num">A</span>
+          <span class="step-title">Brazos (Arms): Fuerza motora</span>
+        </div>
+        <p class="step-instructions">Pide que levante ambos brazos hacia adelante con los ojos cerrados durante 10 segundos:</p>
+        <div class="options-grid">
+          <button class="btn-check ${fastState.brazo === false ? 'selected-normal' : ''}" onclick="seleccionarFAST('brazo', false)">
+            <span>💪 Mantiene los dos</span>
+            <small style="color:var(--text-muted);">Fuerza simétrica</small>
+          </button>
+          <button class="btn-check ${fastState.brazo === true ? 'selected-danger' : ''}" onclick="seleccionarFAST('brazo', true)">
+            <span>⚠️ Un brazo cae</span>
+            <small style="color:var(--danger);">No tiene fuerza o cae</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-header">
+          <span class="step-num">S</span>
+          <span class="step-title">Habla (Speech): Claridad y comprensión</span>
+        </div>
+        <p class="step-instructions">Pide que repita la frase: <em>«El cielo está despejado hoy»</em>:</p>
+        <div class="options-grid">
+          <button class="btn-check ${fastState.habla === false ? 'selected-normal' : ''}" onclick="seleccionarFAST('habla', false)">
+            <span>🗣️ Habla clara</span>
+            <small style="color:var(--text-muted);">Comprende y pronuncia bien</small>
+          </button>
+          <button class="btn-check ${fastState.habla === true ? 'selected-danger' : ''}" onclick="seleccionarFAST('habla', true)">
+            <span>🚨 Habla trabada</span>
+            <small style="color:var(--danger);">Arrastra palabras o incoherente</small>
+          </button>
+        </div>
+      </div>
+
+      <div style="background:#0F172A; border-radius:12px; padding:1rem; text-align:center; font-size:0.9rem; color:var(--text-muted); margin-top:1.5rem;">
+        Si se confirma cualquiera de los signos anormales, la aplicación pasará de inmediato a la pantalla de llamada directa de emergencia al 112.
+      </div>
+    `;
+
+    card.innerHTML = html;
+  }
+
+  function seleccionarFAST(campo, valor) {
+    fastState[campo] = valor;
+    renderFast();
+  }
+
+  function reiniciarFAST() {
+    fastState = { cara: null, brazo: null, habla: null, hora: '' };
+    renderFast();
+  }
+
+  // ------------------------------------------------------------------ Pestaña Pulso (Fibrilación Auricular)
+  function renderPulse() {
+    var card = document.getElementById('contentCard');
+
+    var html = `
+      <div style="text-align:center; margin-bottom:1rem;">
+        <h3 style="font-size:1.3rem;">Detector de Arritmia y Fibrilación Auricular</h3>
+        <p style="color:var(--text-muted); font-size:0.95rem; margin-top:0.35rem;">
+          La fibrilación auricular es la causa del 20% de los ictus y muchas veces es asintomática.
+          Toma tu pulso en la muñeca o cuello y pulsa el botón rojo al ritmo de cada latido (mínimo 15 toques).
+        </p>
+      </div>
+
+      <div class="pulse-btn" onclick="tocarPulso()">
+        <span style="font-size:2rem;">❤️</span>
+        <span>TOCAR PULSO</span>
+        <span id="pulseCount" style="font-size:0.85rem; font-weight:normal; opacity:0.8;">0 toques</span>
+      </div>
+
+      <div id="pulseResults"></div>
+
+      <div style="text-align:center; margin-top:1rem;">
+        <button onclick="reiniciarPulso()" style="background:none; border:none; color:var(--text-muted); text-decoration:underline; font-size:0.85rem; cursor:pointer;">
+          Reiniciar registro de pulso
+        </button>
+      </div>
+    `;
+
+    card.innerHTML = html;
+  }
+
+  function tocarPulso() {
+    var t = performance.now();
+    pulseState.timestamps.push(t);
+    document.getElementById('pulseCount').innerText = pulseState.timestamps.length + ' toques';
+
+    if (pulseState.timestamps.length >= 10) {
+      var res = IctusSOS.analizarRitmoPulso(pulseState.timestamps);
+      if (res.ok) {
+        var boxHtml = `
+          <div class="pulse-metric-box">
+            <div class="metric-item">
+              <div class="metric-value">${res.bpmEstimado}</div>
+              <div class="metric-lbl">Pulsaciones (BPM)</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-value">${res.irregularidadPorcentaje}%</div>
+              <div class="metric-lbl">Irregularidad</div>
+            </div>
+          </div>
+
+          <div style="margin-top:1rem; padding:1rem; border-radius:10px; font-size:0.95rem; line-height:1.4; background:${res.sospechaArritmia ? 'rgba(239,68,68,0.2); border:1px solid var(--danger); color:#FCA5A5;' : 'rgba(16,185,129,0.15); border:1px solid var(--success); color:#6EE7B7;'}">
+            <strong>${res.sospechaArritmia ? '⚠️ SOSPECHA DE ARRITMIA / FIBRILACIÓN AURICULAR' : '✅ RITMO REGULAR'}</strong><br>
+            ${res.avisoClinico}
+          </div>
+        `;
+        document.getElementById('pulseResults').innerHTML = boxHtml;
+      }
+    }
+  }
+
+  function reiniciarPulso() {
+    pulseState.timestamps = [];
+    renderPulse();
+  }
+
+  // Inicializar
+  renderFast();
+</script>
+</body>
+</html>
