@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IctusSOS — Detección rápida de Ictus y Fibrilación Auricular en 60s</title>
-  <meta name="description" content="Cribado prehospitalario de Ictus en 60 segundos (Escala FAST / Cincinnati) y detector de arritmia. 100% privado en tu navegador.">
+  <title>IctusSOS v2.0 — Escala BE-FAST, Triaje de Gran Vaso (VAN) y Test de Arritmia</title>
+  <meta name="description" content="Cribado prehospitalario de Ictus con escala BE-FAST (sensibilidad 95%), detección de Oclusión de Gran Vaso y test de arritmia. 100% privado en tu navegador.">
   <style>
     :root {
       --bg: #0F172A;
@@ -36,7 +36,7 @@
 
     .container {
       width: 100%;
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
     }
 
@@ -88,6 +88,7 @@
       background: rgba(15, 23, 42, 0.6);
       padding: 0.35rem;
       border-radius: 12px;
+      overflow-x: auto;
     }
     .tab-btn {
       flex: 1;
@@ -100,6 +101,7 @@
       border-radius: 9px;
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
     }
     .tab-btn.active {
       background: var(--primary);
@@ -120,24 +122,24 @@
       margin-bottom: 0.5rem;
     }
     .step-num {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       background: var(--primary);
       color: white;
       border-radius: 50%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: bold;
     }
     .step-title {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 800;
     }
     .step-instructions {
       color: #CBD5E1;
-      font-size: 1rem;
+      font-size: 0.95rem;
       margin-bottom: 1rem;
     }
 
@@ -153,7 +155,7 @@
       border: 2px solid var(--border);
       border-radius: 12px;
       color: var(--text);
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
       cursor: pointer;
       display: flex;
@@ -237,7 +239,7 @@
     .list-do li::before { content: "✅"; }
     .list-dont li::before { content: "❌"; }
 
-    /* Tap-tempo pulso */
+    /* Pulso */
     .pulse-btn {
       width: 160px;
       height: 160px;
@@ -262,8 +264,8 @@
 
     .pulse-metric-box {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
       margin-top: 1rem;
       text-align: center;
     }
@@ -272,22 +274,31 @@
       border-radius: 10px;
       padding: 0.85rem;
     }
-    .metric-value { font-size: 1.6rem; font-weight: 900; color: #FFFFFF; }
-    .metric-lbl { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+    .metric-value { font-size: 1.5rem; font-weight: 900; color: #FFFFFF; }
+    .metric-lbl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+
+    .van-box {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: 1.25rem;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
   <header>
-    <div class="badge">⏱️ CÓDIGO ICTUS · PROTOCOLO DE URGENCIA</div>
+    <div class="badge">⏱️ CÓDIGO ICTUS v2.0 · ESCALA BE-FAST (S 95%)</div>
     <h1>IctusSOS</h1>
-    <p class="subtitle">Cribado prehospitalario en 60 segundos y detector de arritmia silenciosa</p>
+    <p class="subtitle">Detección prehospitalaria de Ictus anterior y posterior + Triaje de Oclusión de Gran Vaso (VAN)</p>
   </header>
 
   <div class="tabs">
-    <button class="tab-btn active" id="tabFast" onclick="cambiarTab('fast')">🚨 Cribado de Ictus (FAST)</button>
-    <button class="tab-btn" id="tabPulse" onclick="cambiarTab('pulse')">🫀 Test de Pulso y Arritmia</button>
+    <button class="tab-btn active" id="tabBefast" onclick="cambiarTab('befast')">🚨 Cribado BE-FAST</button>
+    <button class="tab-btn" id="tabPulse" onclick="cambiarTab('pulse')">🫀 Test de Pulso / Arritmia</button>
+    <button class="tab-btn" id="tabProtocol" onclick="cambiarTab('protocol')">📋 Protocolo 112</button>
   </div>
 
   <div class="card" id="contentCard">
@@ -299,12 +310,20 @@
 <script>
   'use strict';
 
-  var tabActual = 'fast';
-  var fastState = {
+  var tabActual = 'befast';
+  var befastState = {
+    equilibrio: null,
+    ojos: null,
     cara: null,
     brazo: null,
     habla: null,
     hora: ''
+  };
+
+  var vanState = {
+    vision: false,
+    afasia: false,
+    negligencia: false
   };
 
   var pulseState = {
@@ -314,10 +333,9 @@
 
   var ubicacionTexto = 'Obteniendo localización GPS...';
 
-  // Obtener geolocalización para facilitar datos al 112
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function (pos) {
-      ubicacionTexto = 'Coordenadas: ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+      ubicacionTexto = 'Coordenadas GPS: ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
     }, function () {
       ubicacionTexto = 'Ubicación GPS no disponible (indicar dirección postal al 112).';
     });
@@ -325,26 +343,35 @@
 
   function cambiarTab(tab) {
     tabActual = tab;
-    document.getElementById('tabFast').classList.toggle('active', tab === 'fast');
+    document.getElementById('tabBefast').classList.toggle('active', tab === 'befast');
     document.getElementById('tabPulse').classList.toggle('active', tab === 'pulse');
-    if (tab === 'fast') renderFast();
-    else renderPulse();
+    document.getElementById('tabProtocol').classList.toggle('active', tab === 'protocol');
+
+    if (tab === 'befast') renderBefast();
+    else if (tab === 'pulse') renderPulse();
+    else renderProtocol();
   }
 
-  // ------------------------------------------------------------------ Pestaña FAST
-  function renderFast() {
-    var evaluacion = IctusSOS.evaluarFAST(fastState);
+  function renderBefast() {
+    var evaluacion = IctusSOS.evaluarBEFAST(befastState);
     var card = document.getElementById('contentCard');
-
     var html = '';
 
-    // Si hay algún signo positivo -> ALARMA ROJA INMEDIATA
     if (evaluacion.sospechaIctus) {
+      var ventana = IctusSOS.calcularVentanaTerapeutica(befastState.hora);
+      var vanRes = IctusSOS.evaluarLVO_VAN({
+        debilidadBrazo: befastState.brazo === true,
+        alteracionVisual: vanState.vision,
+        afasiaComprension: vanState.afasia,
+        negligenciaEspacial: vanState.negligencia
+      });
+
       html += `
         <div class="emergency-banner">
-          <h3>🚨 ALERTA: ALTA SOSPECHA DE ICTUS (${evaluacion.porcentajeEstimado})</h3>
+          <h3>🚨 ALERTA: ALTA SOSPECHA DE ICTUS AGUDO (${evaluacion.porcentajeEstimado})</h3>
           <p style="color:#CBD5E1; font-size:0.95rem; margin-top:0.25rem;">
-            Se ha detectado al menos 1 signo clásico del ictus. <strong>CADA MINUTO CUENTA:</strong> mueren 2 millones de neuronas por minuto.
+            Territorio detectado: <strong>${evaluacion.territorioProbable.replace(/_/g, ' ').toUpperCase()}</strong>.
+            ${evaluacion.signos.equilibrio || evaluacion.signos.ojos ? ' <em>(Signos de circulación posterior/tronco encefálico capturados)</em>.' : ''}
           </p>
         </div>
 
@@ -354,132 +381,222 @@
 
         <div style="background:#0F172A; border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; border-left:4px solid var(--primary);">
           <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Qué decirle al operador del 112:</div>
-          <p style="font-size:1.1rem; font-weight:700; margin:0.5rem 0; color:#FFFFFF;">
+          <p style="font-size:1.05rem; font-weight:700; margin:0.5rem 0; color:#FFFFFF;">
             «${evaluacion.mensajeSugerido112}»
           </p>
           <div style="font-size:0.9rem; color:#93C5FD;">📍 ${ubicacionTexto}</div>
         </div>
 
-        <div class="protocol-card">
-          <h4 style="color:#10B981; font-size:1.1rem;">✅ Qué SÍ debes hacer:</h4>
-          <ul class="protocol-list list-do">
-            ${IctusSOS.PROTOCOLO_PRIMEROS_AUXILIOS.hacer.map(function(h){ return '<li>'+h+'</li>'; }).join('')}
-          </ul>
-        </div>
+        ${befastState.hora ? `
+          <div style="background:#0F172A; border-radius:12px; padding:1rem; margin-bottom:1.5rem;">
+            <strong>Ventana terapéutica:</strong> ${ventana.horasTexto} de evolución.<br>
+            <span style="font-size:0.9rem; color:#CBD5E1;">${ventana.urgenciaMensaje}</span>
+          </div>
+        ` : ''}
 
-        <div class="protocol-card" style="border:1px solid #7F1D1D;">
-          <h4 style="color:#EF4444; font-size:1.1rem;">❌ LO QUE NUNCA DEBES HACER (PELIGRO MORTAL):</h4>
-          <ul class="protocol-list list-dont">
-            ${IctusSOS.PROTOCOLO_PRIMEROS_AUXILIOS.noHacer.map(function(nh){ return '<li>'+nh+'</li>'; }).join('')}
-          </ul>
-        </div>
+        ${befastState.brazo === true ? `
+          <div class="van-box">
+            <h4 style="color:#93C5FD; font-size:1.1rem; margin-bottom:0.5rem;">🧠 Triaje de Oclusión de Gran Vaso (Escala VAN)</h4>
+            <p style="font-size:0.85rem; color:#CBD5E1; margin-bottom:0.75rem;">
+              Al haber debilidad en brazo, evalúa si hay signos corticales para traslado directo a hospital con sala de Trombectomía Mecánica:
+            </p>
+            <label style="display:block; margin-bottom:6px; cursor:pointer;">
+              <input type="checkbox" ${vanState.vision ? 'checked' : ''} onchange="vanState.vision=this.checked; renderBefast();">
+              <strong>V - Visión:</strong> Pérdida visual a un lado o visión doble.
+            </label>
+            <label style="display:block; margin-bottom:6px; cursor:pointer;">
+              <input type="checkbox" ${vanState.afasia ? 'checked' : ''} onchange="vanState.afasia=this.checked; renderBefast();">
+              <strong>A - Afasia:</strong> No entiende órdenes sencillas ("cierre los ojos") o habla incoherente.
+            </label>
+            <label style="display:block; margin-bottom:6px; cursor:pointer;">
+              <input type="checkbox" ${vanState.negligencia ? 'checked' : ''} onchange="vanState.negligencia=this.checked; renderBefast();">
+              <strong>N - Negligencia:</strong> Ignora estímulos en su lado izquierdo o mira fijamente hacia un lado.
+            </label>
 
-        <button onclick="reiniciarFAST()" style="background:none; border:none; color:var(--text-muted); text-decoration:underline; font-size:0.9rem; width:100%; cursor:pointer; margin-top:1rem;">
-          Reiniciar test de comprobación
-        </button>
+            ${vanRes.sospechaGranVaso ? `
+              <div style="margin-top:10px; padding:10px; background:rgba(239,68,68,0.25); border-radius:8px; color:#FCA5A5; font-size:0.9rem; font-weight:700;">
+                ⚠️ ALERTA VAN+: ${vanRes.recomendacionTransporte}
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
       `;
-      card.innerHTML = html;
-      return;
     }
 
-    // Formulario de los 3 pasos de comprobación
     html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h2 style="font-size:1.25rem;">Cuestionario BE-FAST (60 Segundos)</h2>
+        <button onclick="resetBefast()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.85rem;">🔄 Reiniciar</button>
+      </div>
+
+      <!-- B: Balance -->
+      <div class="step-box">
+        <div class="step-header">
+          <span class="step-num">B</span>
+          <span class="step-title">Balance / Equilibrio</span>
+        </div>
+        <p class="step-instructions">¿Ha perdido de repente el equilibrio, tiene dificultad para caminar o vértigo incoercible?</p>
+        <div class="options-grid">
+          <button class="btn-check ${befastState.equilibrio === false ? 'selected-normal' : ''}" onclick="setBefast('equilibrio', false)">
+            <span>✅ Normal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Camina con estabilidad</small>
+          </button>
+          <button class="btn-check ${befastState.equilibrio === true ? 'selected-danger' : ''}" onclick="setBefast('equilibrio', true)">
+            <span>⚠️ Inestable</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Pérdida de equilibrio súbita</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- E: Eyes -->
+      <div class="step-box">
+        <div class="step-header">
+          <span class="step-num">E</span>
+          <span class="step-title">Eyes / Ojos y Visión</span>
+        </div>
+        <p class="step-instructions">¿Ha perdido visión en un ojo repentinamente o ve doble (diplopía)?</p>
+        <div class="options-grid">
+          <button class="btn-check ${befastState.ojos === false ? 'selected-normal' : ''}" onclick="setBefast('ojos', false)">
+            <span>✅ Normal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Visión habitual</small>
+          </button>
+          <button class="btn-check ${befastState.ojos === true ? 'selected-danger' : ''}" onclick="setBefast('ojos', true)">
+            <span>⚠️ Alterada</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Ceguera parcial o visión doble</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- F: Face -->
       <div class="step-box">
         <div class="step-header">
           <span class="step-num">F</span>
-          <span class="step-title">Cara (Face): Sonrisa y simetría</span>
+          <span class="step-title">Face / Cara (Sonreír)</span>
         </div>
-        <p class="step-instructions">Pide a la persona que sonría ampliamente o enseñe los dientes:</p>
+        <p class="step-instructions">Pídele que sonría o muestre los dientes. ¿Se le cae un lado de la boca?</p>
         <div class="options-grid">
-          <button class="btn-check ${fastState.cara === false ? 'selected-normal' : ''}" onclick="seleccionarFAST('cara', false)">
-            <span>😃 Sonrisa simétrica</span>
-            <small style="color:var(--text-muted);">Ambos lados suben igual</small>
+          <button class="btn-check ${befastState.cara === false ? 'selected-normal' : ''}" onclick="setBefast('cara', false)">
+            <span>✅ Normal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Sonrisa simétrica</small>
           </button>
-          <button class="btn-check ${fastState.cara === true ? 'selected-danger' : ''}" onclick="seleccionarFAST('cara', true)">
-            <span>🥴 Comisura caída</span>
-            <small style="color:var(--danger);">Un lado de la boca no sube</small>
+          <button class="btn-check ${befastState.cara === true ? 'selected-danger' : ''}" onclick="setBefast('cara', true)">
+            <span>⚠️ Anormal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Boca torcida o caída</small>
           </button>
         </div>
       </div>
 
+      <!-- A: Arm -->
       <div class="step-box">
         <div class="step-header">
           <span class="step-num">A</span>
-          <span class="step-title">Brazos (Arms): Fuerza motora</span>
+          <span class="step-title">Arm / Brazos (Fuerza)</span>
         </div>
-        <p class="step-instructions">Pide que levante ambos brazos hacia adelante con los ojos cerrados durante 10 segundos:</p>
+        <p class="step-instructions">Pídele que levante ambos brazos hacia adelante durante 10 segundos con ojos cerrados.</p>
         <div class="options-grid">
-          <button class="btn-check ${fastState.brazo === false ? 'selected-normal' : ''}" onclick="seleccionarFAST('brazo', false)">
-            <span>💪 Mantiene los dos</span>
-            <small style="color:var(--text-muted);">Fuerza simétrica</small>
+          <button class="btn-check ${befastState.brazo === false ? 'selected-normal' : ''}" onclick="setBefast('brazo', false)">
+            <span>✅ Normal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Mantiene ambos brazos</small>
           </button>
-          <button class="btn-check ${fastState.brazo === true ? 'selected-danger' : ''}" onclick="seleccionarFAST('brazo', true)">
-            <span>⚠️ Un brazo cae</span>
-            <small style="color:var(--danger);">No tiene fuerza o cae</small>
+          <button class="btn-check ${befastState.brazo === true ? 'selected-danger' : ''}" onclick="setBefast('brazo', true)">
+            <span>⚠️ Anormal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Un brazo cae o claudica</small>
           </button>
         </div>
       </div>
 
+      <!-- S: Speech -->
       <div class="step-box">
         <div class="step-header">
           <span class="step-num">S</span>
-          <span class="step-title">Habla (Speech): Claridad y comprensión</span>
+          <span class="step-title">Speech / Habla y Comprensión</span>
         </div>
-        <p class="step-instructions">Pide que repita la frase: <em>«El cielo está despejado hoy»</em>:</p>
+        <p class="step-instructions">Pídele repetir una frase simple: <em>«El cielo es azul en primavera»</em>.</p>
         <div class="options-grid">
-          <button class="btn-check ${fastState.habla === false ? 'selected-normal' : ''}" onclick="seleccionarFAST('habla', false)">
-            <span>🗣️ Habla clara</span>
-            <small style="color:var(--text-muted);">Comprende y pronuncia bien</small>
+          <button class="btn-check ${befastState.habla === false ? 'selected-normal' : ''}" onclick="setBefast('habla', false)">
+            <span>✅ Normal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Habla clara y comprende</small>
           </button>
-          <button class="btn-check ${fastState.habla === true ? 'selected-danger' : ''}" onclick="seleccionarFAST('habla', true)">
-            <span>🚨 Habla trabada</span>
-            <small style="color:var(--danger);">Arrastra palabras o incoherente</small>
+          <button class="btn-check ${befastState.habla === true ? 'selected-danger' : ''}" onclick="setBefast('habla', true)">
+            <span>⚠️ Anormal</span>
+            <small style="font-weight:normal; font-size:0.8rem;">Arrastra palabras o confuso</small>
           </button>
         </div>
       </div>
 
-      <div style="background:#0F172A; border-radius:12px; padding:1rem; text-align:center; font-size:0.9rem; color:var(--text-muted); margin-top:1.5rem;">
-        Si se confirma cualquiera de los signos anormales, la aplicación pasará de inmediato a la pantalla de llamada directa de emergencia al 112.
+      <!-- T: Time -->
+      <div class="step-box">
+        <div class="step-header">
+          <span class="step-num">T</span>
+          <span class="step-title">Time / Hora de Inicio</span>
+        </div>
+        <p class="step-instructions">¿A qué hora comenzaron los síntomas o cuándo se le vio bien por última vez?</p>
+        <input type="time" id="inputHora" value="${befastState.hora}" onchange="befastState.hora=this.value; renderBefast();" 
+               style="background:#0F172A; border:1px solid var(--border); color:white; padding:0.75rem 1rem; border-radius:10px; font-size:1.1rem; width:100%; max-width:240px;">
       </div>
     `;
 
     card.innerHTML = html;
   }
 
-  function seleccionarFAST(campo, valor) {
-    fastState[campo] = valor;
-    renderFast();
+  function setBefast(key, val) {
+    befastState[key] = val;
+    renderBefast();
   }
 
-  function reiniciarFAST() {
-    fastState = { cara: null, brazo: null, habla: null, hora: '' };
-    renderFast();
+  function resetBefast() {
+    befastState = { equilibrio: null, ojos: null, cara: null, brazo: null, habla: null, hora: '' };
+    vanState = { vision: false, afasia: false, negligencia: false };
+    renderBefast();
   }
 
-  // ------------------------------------------------------------------ Pestaña Pulso (Fibrilación Auricular)
   function renderPulse() {
     var card = document.getElementById('contentCard');
+    var res = IctusSOS.analizarRitmoPulso(pulseState.timestamps);
 
     var html = `
-      <div style="text-align:center; margin-bottom:1rem;">
-        <h3 style="font-size:1.3rem;">Detector de Arritmia y Fibrilación Auricular</h3>
-        <p style="color:var(--text-muted); font-size:0.95rem; margin-top:0.35rem;">
-          La fibrilación auricular es la causa del 20% de los ictus y muchas veces es asintomática.
-          Toma tu pulso en la muñeca o cuello y pulsa el botón rojo al ritmo de cada latido (mínimo 15 toques).
+      <h2 style="font-size:1.35rem; margin-bottom:0.35rem;">Detector de Fibrilación Auricular (FA)</h2>
+      <p style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1.5rem;">
+        La Fibrilación Auricular es la causa de 1 de cada 4 ictus. Cursa con ritmo cardíaco <strong>completamente irregular</strong>. 
+        Pon tu dedo sobre tu pulso (cuello o muñeca) y pulsa el botón rojo en cada latido que sientas durante 15-20 segundos.
+      </p>
+
+      <button class="pulse-btn" onclick="registrarPulsacion()">
+        <span>❤️ PULSO</span>
+        <small style="font-size:0.75rem; font-weight:normal; margin-top:4px;">Toca con cada latido</small>
+      </button>
+
+      <div class="pulse-metric-box">
+        <div class="metric-item">
+          <div class="metric-value">${res.ok ? res.bpmEstimado : '--'}</div>
+          <div class="metric-lbl">Frecuencia (lpm)</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-value">${res.ok ? res.irregularidadPorcentaje + '%' : '--'}</div>
+          <div class="metric-lbl">Irregularidad (CV)</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-value">${pulseState.timestamps.length}</div>
+          <div class="metric-lbl">Latidos contados</div>
+        </div>
+      </div>
+
+      ${res.ok ? `
+        <div style="margin-top:1.5rem; padding:1.25rem; border-radius:12px; background:${res.sospechaArritmia ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.15)'}; border:1px solid ${res.sospechaArritmia ? 'var(--danger)' : 'var(--success)'};">
+          <h4 style="font-size:1.1rem; color:${res.sospechaArritmia ? '#F87171' : '#6EE7B7'}; margin-bottom:0.35rem;">
+            ${res.sospechaArritmia ? '⚠️ SOSPECHA DE ARRITMIA / FIBRILACIÓN' : '✅ RITMO REGULAR'}
+          </h4>
+          <p style="font-size:0.95rem; color:#CBD5E1;">${res.avisoClinico}</p>
+        </div>
+      ` : (pulseState.timestamps.length > 0 ? `
+        <p style="text-align:center; color:var(--text-muted); margin-top:1rem; font-size:0.9rem;">
+          Llevas ${pulseState.timestamps.length}/10 toques mínimos requeridos... Sigue pulsando rítmicamente.
         </p>
-      </div>
+      ` : '')}
 
-      <div class="pulse-btn" onclick="tocarPulso()">
-        <span style="font-size:2rem;">❤️</span>
-        <span>TOCAR PULSO</span>
-        <span id="pulseCount" style="font-size:0.85rem; font-weight:normal; opacity:0.8;">0 toques</span>
-      </div>
-
-      <div id="pulseResults"></div>
-
-      <div style="text-align:center; margin-top:1rem;">
-        <button onclick="reiniciarPulso()" style="background:none; border:none; color:var(--text-muted); text-decoration:underline; font-size:0.85rem; cursor:pointer;">
-          Reiniciar registro de pulso
+      <div style="text-align:center; margin-top:1.5rem;">
+        <button onclick="pulseState.timestamps=[]; renderPulse();" style="background:#0F172A; border:1px solid var(--border); color:var(--text-muted); padding:0.5rem 1rem; border-radius:8px; cursor:pointer;">
+          Reiniciar prueba de pulso
         </button>
       </div>
     `;
@@ -487,43 +604,37 @@
     card.innerHTML = html;
   }
 
-  function tocarPulso() {
-    var t = performance.now();
-    pulseState.timestamps.push(t);
-    document.getElementById('pulseCount').innerText = pulseState.timestamps.length + ' toques';
-
-    if (pulseState.timestamps.length >= 10) {
-      var res = IctusSOS.analizarRitmoPulso(pulseState.timestamps);
-      if (res.ok) {
-        var boxHtml = `
-          <div class="pulse-metric-box">
-            <div class="metric-item">
-              <div class="metric-value">${res.bpmEstimado}</div>
-              <div class="metric-lbl">Pulsaciones (BPM)</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-value">${res.irregularidadPorcentaje}%</div>
-              <div class="metric-lbl">Irregularidad</div>
-            </div>
-          </div>
-
-          <div style="margin-top:1rem; padding:1rem; border-radius:10px; font-size:0.95rem; line-height:1.4; background:${res.sospechaArritmia ? 'rgba(239,68,68,0.2); border:1px solid var(--danger); color:#FCA5A5;' : 'rgba(16,185,129,0.15); border:1px solid var(--success); color:#6EE7B7;'}">
-            <strong>${res.sospechaArritmia ? '⚠️ SOSPECHA DE ARRITMIA / FIBRILACIÓN AURICULAR' : '✅ RITMO REGULAR'}</strong><br>
-            ${res.avisoClinico}
-          </div>
-        `;
-        document.getElementById('pulseResults').innerHTML = boxHtml;
-      }
-    }
-  }
-
-  function reiniciarPulso() {
-    pulseState.timestamps = [];
+  function registrarPulsacion() {
+    pulseState.timestamps.push(Date.now());
     renderPulse();
   }
 
-  // Inicializar
-  renderFast();
+  function renderProtocol() {
+    var card = document.getElementById('contentCard');
+    var p = IctusSOS.PROTOCOLO_PRIMEROS_AUXILIOS;
+    card.innerHTML = `
+      <h2 style="font-size:1.35rem; margin-bottom:1rem;">Protocolo de Actuación ante Ictus</h2>
+
+      <div class="protocol-card">
+        <h4 style="color:#6EE7B7; font-size:1.1rem;">Qué SÍ debes hacer:</h4>
+        <ul class="protocol-list list-do">
+          ${p.hacer.map(function(item) { return '<li>' + item + '</li>'; }).join('')}
+        </ul>
+      </div>
+
+      <div class="protocol-card">
+        <h4 style="color:#F87171; font-size:1.1rem;">Qué NUNCA debes hacer:</h4>
+        <ul class="protocol-list list-dont">
+          ${p.noHacer.map(function(item) { return '<li>' + item + '</li>'; }).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  window.addEventListener('DOMContentLoaded', function () {
+    renderBefast();
+  });
 </script>
+
 </body>
 </html>

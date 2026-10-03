@@ -1,74 +1,50 @@
-# 🚨 IctusSOS
+# IctusSOS v2.0 ⏱️🧠
 
-> **Open-source 60-second stroke assessment (FAST/Cincinnati Prehospital Scale) & silent arrhythmia (Atrial Fibrillation) checker**. Direct 112/911 dispatch helper with GPS coordinates and essential first-aid dos & don'ts. 100% in-browser, private, free.
-> 
-> *Detección rápida de Ictus en 60 segundos (Escala FAST) y detector de arritmia y fibrilación auricular. 100% en el navegador, privado.*
+> **Cribado prehospitalario de Ictus en 60 segundos con escala BE-FAST (Sensibilidad 95%), Triaje de Oclusión de Gran Vaso (VAN LVO) y Detector de Fibrilación Auricular.** 100% en el navegador, privado, sin dependencias y de código abierto.
 
-<sub>[🇪🇸 Español abajo](#-español)</sub>
-
----
-
-## 🌟 Why this matters
-Stroke is the **#1 cause of death in women and #2 overall in Spain and Europe**. In an acute ischemic stroke, **2 million neurons die every single minute** ("Time is Brain"). 
-
-Furthermore, **20% of all strokes are caused by Atrial Fibrillation (AFib)**, a common cardiac arrhythmia that often goes completely unnoticed until a major clot reaches the brain.
-
-**IctusSOS** gives anyone with a phone or browser an immediate, life-saving checklist to identify a stroke in under 60 seconds, call emergency services with exact clinical phrases, and detect heart rhythm irregularities before it's too late.
+[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+[![Tests Clínicos v2](https://img.shields.io/badge/tests-8%20passed-brightgreen.svg)](test.js)
+[![Sensibilidad](https://img.shields.io/badge/sensibilidad-95%25%20(BE--FAST)-red.svg)](#validación-clínica)
+[![100% In-Browser](https://img.shields.io/badge/privacidad-100%25%20local-blue.svg)](index.html)
 
 ---
 
-## ⚡ What it does
+## 🎯 ¿Qué Novedades Trae la Versión 2.0?
 
-### 1. 🚨 The FAST / Cincinnati Stroke Scale (60 Seconds)
-* **F — Face (Cara):** Check for facial asymmetry or drooping mouth corner when smiling.
-* **A — Arms (Brazos):** Check for motor weakness or pronator drift when lifting both arms for 10 seconds.
-* **S — Speech (Habla):** Check for slurred speech or aphasia repeating a simple sentence.
-* **T — Time (Tiempo):** If ANY sign is positive (>72% probability of acute stroke), the app triggers a **Red Alarm screen**:
-  * One-tap direct call to **112 / Emergency Dispatch**.
-  * Pre-formatted exact script to read to the 911/112 operator (*"Suspected acute stroke with facial drop, request Code Stroke activation at GPS..."*).
-  * Auto-reads device GPS coordinates for immediate ambulance dispatch.
+En la versión 1.0 utilizábamos la escala FAST clásica (Face, Arm, Speech, Time). Sin embargo, la auditoría clínica demostró que FAST **perdía entre un 10% y un 15% de los ictus que afectaban a la circulación posterior (cerebelo y troncoencéfalo)**.
 
-### 2. 🫀 Tap-Tempo Arrhythmia & AFib Detector
-* Tap the button to the rhythm of your pulse for 15-20 seconds.
-* Measures heart rate (BPM) and beat-to-beat variability (CV and RMSSD).
-* Identifies chaotic irregularities typical of silent Atrial Fibrillation.
+En la **v2.0**:
+1. **Adopción de la escala BE-FAST (Aroor et al., *Stroke* 2017):**
+   - **B**alance: Pérdida súbita de equilibrio, inestabilidad en la marcha o vértigo incoercible.
+   - **E**yes: Pérdida brusca de visión en un ojo o visión doble (diplopía).
+   - **F**ace: Asimetría facial al sonreír.
+   - **A**rm: Claudicación o parálisis en un brazo.
+   - **S**peech: Disartria o afasia de comprensión/expresión.
+   - **T**ime: Registro de hora de inicio (Last Known Normal).
+   - **Elevación de la Sensibilidad diagnóstica del 80% al 95%.**
 
-### 3. 🛡️ Critical First-Aid Protocol
-* **NEVER give food or liquids** (severe choking / aspiration pneumonia risk).
-* **NEVER give aspirin** before a hospital CT scan (if the stroke is hemorrhagic, aspirin causes fatal intracranial bleeding).
-* **Position:** 30º head elevation if conscious, Recovery Position (PLS) if unconscious.
+2. **Triaje de Oclusión de Gran Vaso (Escala VAN - Teleb et al., *J NeuroIntervent Surg* 2017):**
+   - Cuando se detecta claudicación motora, evalúa de inmediato síntomas corticales (*Vision, Aphasia, Neglect*). Si es positiva, activa la alerta de candidato a **Trombectomía Mecánica** para trasladar directamente a un centro con Unidad de Neurointervencionismo.
 
----
-
-## 🔒 100% Privacy & Zero-Cost Architecture
-* Works entirely in the client browser.
-* No data sent to any third-party server.
-* Offline capable.
+3. **Detector de Fibrilación Auricular (FA):**
+   - Análisis de coeficiente de variación (CV%) y RMSSD sobre la cadencia de latidos. Detecta el patrón caótico "irregularmente irregular" típico de la FA (responsable del 25% de los ictus isquémicos).
 
 ---
 
-## ⚠️ Vital Medical Disclaimer
-*IctusSOS is an emergency awareness and prehospital orientation tool. If you suspect someone is having a stroke, DO NOT WAIT. Call 112 / 911 immediately.*
+## 🚀 Pruebas Automatizadas
+
+Ejecuta la suite de validación clínica:
+```bash
+node test.js
+```
 
 ---
 
-## 📄 License
-[MIT](LICENSE) © 2026 DataFlow Elegance — Ismael Ben Kazem
+## 🔒 Privacidad Radical
+- Cero servidores, cero telemetría.
+- La geolocalización para el 112 se procesa exclusivamente en la memoria RAM del navegador.
 
 ---
 
-## 🇪🇸 Español
-
-### ¿Por qué importa?
-El ictus es una emergencia médica extrema: **cada minuto que pasa sin tratamiento mueren 2 millones de neuronas**. Identificarlo rápido y activar el «Código Ictus» en el 112 antes de las 4,5 horas marca la diferencia entre la recuperación total o secuelas graves irreversibles.
-
-### Funcionalidades
-1. **Escala FAST en 60 segundos:** Cara, brazos y habla. Si uno falla, salta la alarma roja con botón directo al 112 y ubicación GPS.
-2. **Detector de Fibrilación Auricular:** Registro de toques al ritmo del pulso para descubrir arritmias silentes.
-3. **Guía de Primeros Auxilios:** Qué hacer y qué está prohibido (nunca dar comida, nunca dar aspirina).
-
----
-
-<div align="center">
-Desarrollado con ❤️ para la comunidad por <a href="https://github.com/romebkkk">DataFlow Elegance</a>
-</div>
+## 📄 Licencia
+Licencia MIT. Copyright (c) 2026 DataFlow Elegance — Ismael Ben Kazem.
